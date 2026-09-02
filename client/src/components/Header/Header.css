@@ -1,0 +1,98 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 28px;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e9ef;
+  z-index: 10; /* Keeps header above other elements */
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #6d5ce8, #4f46e5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-logo-mark {
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.header-title-block {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.header-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1f2b;
+  margin: 0;
+}
+
+.header-subtitle {
+  font-size: 12px;
+  color: #8892a3;
+  font-family: "SFMono-Regular", Consolas, monospace;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.header-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #4b5566;
+}
+
+.header-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #d0d5dd;
+}
+
+.header-status.is-live .header-status-dot {
+  background: #16a34a;
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
+}
+
+.header-status.is-down .header-status-dot {
+  background: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+}
+
+.header-refresh-btn {
+  border: 1px solid #dde2ea;
+  background: #ffffff;
+  color: #3a4252;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 7px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.header-refresh-btn:hover {
+  background: #f5f7fa;
+  border-color: #c7ceda;
+}

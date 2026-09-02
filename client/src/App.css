@@ -1,0 +1,21 @@
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.app-body {
+  display: flex;
+  flex: 1; /* Fills the rest of the height below the header */
+}
+
+.app-main {
+  flex: 1; /* Takes up all remaining width next to the sidebar */
+  background: #eef1f6; /* Matches your Home.css background */
+  overflow-y: auto; /* Adds scrolling to content, independent of sidebar */
+}
+
+/* Remove default body margin */
+body {
+  margin: 0;
+}
