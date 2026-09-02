@@ -3,7 +3,7 @@ name: Build, Push, and Update GitOps Manifests
 on:
   push:
     branches:
-      - main
+      - master
     paths:
       - 'client/**'
       - 'server/**'
