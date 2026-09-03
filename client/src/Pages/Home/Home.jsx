@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useState } from "react";
-import api from "../../../../server/api";
 import "./Home.css";
 
 const POLL_INTERVAL_MS = 5000;
+// Make sure this matches your Node.js backend port
+const API_BASE_URL = 'http://localhost:4000/api'; 
 
 function StatusBadge({ status }) {
   const normalized = (status || "unknown").toLowerCase().replace(/\s+/g, "-");
@@ -113,10 +114,16 @@ export default function Home() {
 
   const load = useCallback(async () => {
     try {
-      const [podResult, serviceResult] = await Promise.all([
-        api.getPods(),
-        api.getServices(),
-      ]);
+      // Fetch Pods
+      const podRes = await fetch(`${API_BASE_URL}/pods`);
+      if (!podRes.ok) throw new Error("Failed to fetch pods");
+      const podResult = await podRes.json();
+
+      // Fetch Services
+      const svcRes = await fetch(`${API_BASE_URL}/services`);
+      if (!svcRes.ok) throw new Error("Failed to fetch services");
+      const serviceResult = await svcRes.json();
+
       setData(podResult);
       setServices(serviceResult);
       setError(null);
@@ -134,7 +141,8 @@ export default function Home() {
   const handleDelete = async (podName) => {
     setBusyPod(podName);
     try {
-      await api.deletePod(podName);
+      const res = await fetch(`${API_BASE_URL}/pods/${podName}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error("Failed to delete pod");
       await load();
     } catch (err) {
       setError(err.message);
@@ -146,7 +154,8 @@ export default function Home() {
   const handleRestart = async (deploymentName) => {
     setBusyPod(deploymentName);
     try {
-      await api.restartDeployment(deploymentName);
+      const res = await fetch(`${API_BASE_URL}/deployments/${deploymentName}/restart`, { method: 'POST' });
+      if (!res.ok) throw new Error("Failed to restart deployment");
       await load();
     } catch (err) {
       setError(err.message);
@@ -169,8 +178,6 @@ export default function Home() {
 
   return (
     <div className="home">
-      {/* <Nav namespace={data?.namespace || "devopsplayground"} connected={!error} onRefresh={load} /> */}
-
       <main className="home-content">
         {error && (
           <div className="home-error">
