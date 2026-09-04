@@ -1,0 +1,37 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: devops-server
+  labels:
+    app: devops-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: devops-server
+  template:
+    metadata:
+      labels:
+        app: devops-server
+    spec:
+      serviceAccountName: default 
+      containers:
+      - name: server
+        image: priyanshuvatsyan/devops-server:latest
+        ports:
+        - containerPort: 4000
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: devops-server-svc
+spec:
+  selector:
+    app: devops-server
+  ports:
+    - protocol: TCP
+      port: 4000
+      targetPort: 4000
+  type: ClusterIP
