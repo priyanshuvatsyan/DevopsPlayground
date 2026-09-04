@@ -72,8 +72,8 @@ jobs:
         env:
           NEW_TAG: ${{ needs.build-and-push.outputs.image_tag }}
         run: |
-          sed -i "s|image: ${{ env.CLIENT_IMAGE }}:.*|image: ${{ env.CLIENT_IMAGE }}:${NEW_TAG}|g" k8s/client.yaml
-          sed -i "s|image: ${{ env.SERVER_IMAGE }}:.*|image: ${{ env.SERVER_IMAGE }}:${NEW_TAG}|g" k8s/server.yaml
+          sed -i "s|image: ${{ env.CLIENT_IMAGE }}:.*|image: ${{ env.CLIENT_IMAGE }}:${NEW_TAG}|g" k8s/client-deployment.yml
+          sed -i "s|image: ${{ env.SERVER_IMAGE }}:.*|image: ${{ env.SERVER_IMAGE }}:${NEW_TAG}|g" k8s/server-deployment.yml
 
       - name: Commit and Push Changes
         env:
@@ -82,5 +82,5 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          git add k8s/client.yaml k8s/server.yaml
+          git add k8s/client-deployment.yml k8s/server-deployment.yml
           git diff --quiet && git diff --staged --quiet || (git commit -m "chore(gitops): update image tags to ${NEW_TAG}" && git push)
