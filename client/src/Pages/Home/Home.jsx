@@ -297,11 +297,11 @@ export default function Home() {
             </div>
           </div>
 
-          {(!services || services.services.length === 0) && !error ? (
+{(!services || services?.services?.length === 0) && !error ? (
             <div className="empty-state">No services found in this namespace yet.</div>
           ) : (
             <div className="pod-grid">
-              {services.services.map((svc) => (
+              {services?.services?.map((svc) => (
                 <ServiceCard key={svc.name} service={svc} />
               ))}
             </div>
