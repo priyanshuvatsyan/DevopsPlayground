@@ -18,9 +18,9 @@ spec:
     spec:
       containers:
       - name: client
-        image: priyanshuvatsyan/devops-client:5f2a55a
+        image: priyanshuvatsyan/devops-client:latest
         ports:
-        - containerPort: 80
+        - containerPort: 5173 # <-- Updated to match your container
 
 ---
 apiVersion: v1
@@ -34,5 +34,5 @@ spec:
   ports:
     - protocol: TCP
       port: 80
-      targetPort: 80
+      targetPort: 5173 # <-- Routes incoming HTTP traffic to 5173
   type: ClusterIP
