@@ -5,11 +5,14 @@ metadata:
   name: devops-playground-ingress
   namespace: devopsplayground
   annotations:
-    nginx.ingress.kubernetes.io/ssl-redirect: "false" # Keeping it simple with HTTP for now
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
 spec:
   ingressClassName: nginx
+  tls:
+  - hosts:
+    - devops.priyanshus.duckdns.org
+    secretName: devops-playground-tls 
   rules:
-  # Using a subdomain prevents conflicts with your QR app
   - host: devops.priyanshus.duckdns.org 
     http:
       paths:
