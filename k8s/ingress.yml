@@ -1,0 +1,29 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: devops-playground-ingress
+  namespace: devopsplayground
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false" # Keeping it simple with HTTP for now
+spec:
+  ingressClassName: nginx
+  rules:
+  # Using a subdomain prevents conflicts with your QR app
+  - host: devops.priyanshus.duckdns.org 
+    http:
+      paths:
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: devops-server-svc
+            port:
+              number: 4000
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: devops-client-svc
+            port:
+              number: 80

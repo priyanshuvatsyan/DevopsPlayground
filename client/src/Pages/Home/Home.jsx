@@ -3,7 +3,7 @@ import "./Home.css";
 
 const POLL_INTERVAL_MS = 5000;
 // Make sure this matches your Node.js backend port
-const API_BASE_URL = 'http://localhost:4000/api'; 
+const API_BASE_URL = '/api';
 
 function StatusBadge({ status }) {
   const normalized = (status || "unknown").toLowerCase().replace(/\s+/g, "-");
