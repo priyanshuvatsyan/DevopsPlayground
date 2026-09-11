@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: client
-        image: priyanshuvatsyan/devops-client:df34129
+        image: priyanshuvatsyan/devops-client:5f2a55a
         ports:
         - containerPort: 80
 
