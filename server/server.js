@@ -25,8 +25,11 @@ function isValidK8sName(name) {
 
 function parseCpu(qty) {
   if (!qty) return null;
-  if (qty.endsWith("m")) return parseFloat(qty);
-  return parseFloat(qty) * 1000;
+  if (typeof qty === "number") return qty * 1000;
+  if (qty.endsWith("n")) return parseFloat(qty) / 1000000; // nanocores to millicores
+  if (qty.endsWith("u")) return parseFloat(qty) / 1000; // microcores to millicores
+  if (qty.endsWith("m")) return parseFloat(qty); // millicores
+  return parseFloat(qty) * 1000; // full cores to millicores
 }
 
 function parseMemoryToMi(qty) {
@@ -109,14 +112,20 @@ app.get("/api/pods", async (req, res) => {
     const items = response.body.items || [];
     const metrics = await getPodMetrics(NAMESPACE);
 
+    let totalMemMi = 0;
+
     const pods = items.map((pod) => {
       const name = pod.metadata.name;
       const container = pod.spec?.containers?.[0];
       const limits = container?.resources?.limits || {};
-      const cpuLimitMilli = parseCpu(limits.cpu);
-      const memLimitMi = parseMemoryToMi(limits.memory);
+      
+      // Fallback limits: 1000m (1 CPU Core) and 512Mi if none exist in your YAML
+      const cpuLimitMilli = parseCpu(limits.cpu) || 1000; 
+      const memLimitMi = parseMemoryToMi(limits.memory) || 512; 
       
       const usage = metrics[name] || {};
+      if (usage.memMi) totalMemMi += usage.memMi;
+
       const restarts = (pod.status?.containerStatuses || []).reduce((sum, c) => sum + (c.restartCount || 0), 0);
 
       return {
@@ -129,18 +138,19 @@ app.get("/api/pods", async (req, res) => {
         deployment: pod.metadata.ownerReferences?.find((o) => o.kind === "ReplicaSet")
           ? pod.metadata.labels?.app || null
           : null,
-        cpuPercent: cpuLimitMilli && usage.cpuMilli != null 
-          ? Math.round((usage.cpuMilli / cpuLimitMilli) * 100) 
-          : usage.cpuMilli != null ? Math.round(usage.cpuMilli) : null,
-        memoryPercent: memLimitMi && usage.memMi != null 
-          ? Math.round((usage.memMi / memLimitMi) * 100) 
-          : usage.memMi != null ? Math.round(usage.memMi) : null,
+        // Calculate proper percentages using the usage and limits
+        cpuPercent: usage.cpuMilli != null ? Math.round((usage.cpuMilli / cpuLimitMilli) * 100) : 0,
+        memoryPercent: usage.memMi != null ? Math.round((usage.memMi / memLimitMi) * 100) : 0,
       };
     });
 
     const runningCount = pods.filter((p) => p.status === "Running").length;
+    
     const cpuValues = pods.map((p) => p.cpuPercent).filter((v) => v !== null);
-    const cpuAvgPercent = cpuValues.length ? Math.round(cpuValues.reduce((a, b) => a + b, 0) / cpuValues.length) : null;
+    const cpuAvgPercent = cpuValues.length ? Math.round(cpuValues.reduce((a, b) => a + b, 0) / cpuValues.length) : 0;
+    
+    const memValues = pods.map((p) => p.memoryPercent).filter((v) => v !== null);
+    const memAvgPercent = memValues.length ? Math.round(memValues.reduce((a, b) => a + b, 0) / memValues.length) : 0;
 
     res.json({
       namespace: NAMESPACE,
@@ -149,9 +159,9 @@ app.get("/api/pods", async (req, res) => {
         runningCount,
         totalCount: pods.length,
         cpuAvgPercent,
-        memoryUsedGb: null,
-        memoryTotalGb: null,
-        memoryPercent: null,
+        memoryUsedGb: (totalMemMi / 1024).toFixed(2),
+        memoryTotalGb: ((pods.length * 512) / 1024).toFixed(2),
+        memoryPercent: memAvgPercent,
         clusterName: kc.getCurrentCluster()?.name || "local-cluster",
         healthy: pods.every((p) => p.status === "Running" || p.status === "Pending"),
       },
