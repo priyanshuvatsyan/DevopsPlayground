@@ -7,7 +7,7 @@ metadata:
   labels:
     app: devops-client
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: devops-client
