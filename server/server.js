@@ -14,6 +14,7 @@ const kc = new k8s.KubeConfig();
 kc.loadFromDefault();
 const k8sApi = kc.makeApiClient(k8s.CoreV1Api);
 const k8sAppsApi = kc.makeApiClient(k8s.AppsV1Api);
+const k8sCustomApi = kc.makeApiClient(k8s.CustomObjectsApi);
 
 // Kubernetes resource names: lowercase alphanumerics and '-', RFC 1123 label.
 const K8S_NAME_RE = /^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$/;
@@ -78,10 +79,35 @@ function ageFromTimestamp(ts) {
   return `${mins}m`;
 }
 
+async function getPodMetrics(namespace) {
+  try {
+    const res = await k8sCustomApi.listNamespacedCustomObject(
+      "metrics.k8s.io",
+      "v1beta1",
+      namespace,
+      "pods"
+    );
+    const byName = {};
+    res.body.items.forEach((item) => {
+      let cpuMilli = 0;
+      let memMi = 0;
+      item.containers.forEach((c) => {
+        cpuMilli += parseCpu(c.usage.cpu) || 0;
+        memMi += parseMemoryToMi(c.usage.memory) || 0;
+      });
+      byName[item.metadata.name] = { cpuMilli, memMi };
+    });
+    return byName;
+  } catch (err) {
+    return {}; // Returns empty if metrics-server is still booting or unavailable
+  }
+}
+
 app.get("/api/pods", async (req, res) => {
   try {
     const response = await k8sApi.listNamespacedPod(NAMESPACE);
     const items = response.body.items || [];
+    const metrics = await getPodMetrics(NAMESPACE);
 
     const pods = items.map((pod) => {
       const name = pod.metadata.name;
@@ -90,8 +116,8 @@ app.get("/api/pods", async (req, res) => {
       const cpuLimitMilli = parseCpu(limits.cpu);
       const memLimitMi = parseMemoryToMi(limits.memory);
       
-      const restarts = (pod.status?.containerStatuses || [])
-        .reduce((sum, c) => sum + (c.restartCount || 0), 0);
+      const usage = metrics[name] || {};
+      const restarts = (pod.status?.containerStatuses || []).reduce((sum, c) => sum + (c.restartCount || 0), 0);
 
       return {
         name,
@@ -103,12 +129,18 @@ app.get("/api/pods", async (req, res) => {
         deployment: pod.metadata.ownerReferences?.find((o) => o.kind === "ReplicaSet")
           ? pod.metadata.labels?.app || null
           : null,
-        cpuPercent: null, // Requires metrics-server API integration
-        memoryPercent: null, 
+        cpuPercent: cpuLimitMilli && usage.cpuMilli != null 
+          ? Math.round((usage.cpuMilli / cpuLimitMilli) * 100) 
+          : usage.cpuMilli != null ? Math.round(usage.cpuMilli) : null,
+        memoryPercent: memLimitMi && usage.memMi != null 
+          ? Math.round((usage.memMi / memLimitMi) * 100) 
+          : usage.memMi != null ? Math.round(usage.memMi) : null,
       };
     });
 
     const runningCount = pods.filter((p) => p.status === "Running").length;
+    const cpuValues = pods.map((p) => p.cpuPercent).filter((v) => v !== null);
+    const cpuAvgPercent = cpuValues.length ? Math.round(cpuValues.reduce((a, b) => a + b, 0) / cpuValues.length) : null;
 
     res.json({
       namespace: NAMESPACE,
@@ -116,7 +148,7 @@ app.get("/api/pods", async (req, res) => {
       summary: {
         runningCount,
         totalCount: pods.length,
-        cpuAvgPercent: null,
+        cpuAvgPercent,
         memoryUsedGb: null,
         memoryTotalGb: null,
         memoryPercent: null,
