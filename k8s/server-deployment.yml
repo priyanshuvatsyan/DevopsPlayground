@@ -22,6 +22,13 @@ spec:
         image: priyanshuvatsyan/devops-server:76ecd79
         ports:
         - containerPort: 4000
+        resources:
+          requests:
+            cpu: "100m"     # Baseline: 10% of a core
+            memory: "128Mi"
+          limits:
+            cpu: "500m"     # Max limit: 50% of a core
+            memory: "256Mi"
 
 ---
 apiVersion: v1

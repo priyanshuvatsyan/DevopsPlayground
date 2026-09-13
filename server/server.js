@@ -249,6 +249,28 @@ app.post("/api/deployments/:name/restart", async (req, res) => {
 
 app.get("/healthz", (req, res) => res.json({ ok: true }));
 
+app.post("/api/chaos/stress", (req, res) => {
+  // Run the stress test for 45 seconds to ensure the HPA metrics-server catches it
+  const duration = req.body.duration || 45000; 
+  const end = Date.now() + duration;
+
+  function burnCPU() {
+    if (Date.now() >= end) return;
+    
+    // Burn CPU intensely for 50ms
+    const chunkEnd = Date.now() + 50;
+    while (Date.now() < chunkEnd) {
+      Math.sqrt(Math.random() * Math.random());
+    }
+    
+    // Yield to the event loop so the dashboard doesn't freeze, then immediately resume
+    setTimeout(burnCPU, 0); 
+  }
+  
+  burnCPU();
+  res.json({ ok: true, message: `CPU stress initiated for ${duration / 1000} seconds.` });
+});
+
 app.listen(PORT, () => {
   console.log(`DevOps Playground API listening on :${PORT} (namespace: ${NAMESPACE})`);
 });
