@@ -85,9 +85,11 @@ jobs:
             ${{ env.SERVER_IMAGE }}:${{ steps.set_tag.outputs.tag }}
             ${{ env.SERVER_IMAGE }}:latest
 
-      # 3. IMAGE TESTING & SECURITY SCAN (Must run AFTER images exist in Docker Hub)
+# 3. IMAGE TESTING & SECURITY SCAN
       - name: Run Trivy Vulnerability Scanner (Client)
         uses: aquasecurity/trivy-action@master
+        env:
+          TRIVY_PLATFORM: linux/arm64
         with:
           image-ref: '${{ env.CLIENT_IMAGE }}:${{ steps.set_tag.outputs.tag }}'
           format: 'table'
@@ -97,6 +99,8 @@ jobs:
 
       - name: Run Trivy Vulnerability Scanner (Server)
         uses: aquasecurity/trivy-action@master
+        env:
+          TRIVY_PLATFORM: linux/arm64
         with:
           image-ref: '${{ env.SERVER_IMAGE }}:${{ steps.set_tag.outputs.tag }}'
           format: 'table'
