@@ -48,5 +48,50 @@ export function restartDeployment(deploymentName) {
   });
 }
 
+// Read the active message baked into the current Docker container
+app.get("/api/demo/message", (req, res) => {
+  try {
+    const msg = fs.readFileSync("message.txt", "utf8");
+    res.json({ message: msg });
+  } catch (err) {
+    res.json({ message: "Default System Message" });
+  }
+});
+
+// Fire the webhook to GitHub Actions
+app.post("/api/demo/trigger", async (req, res) => {
+  const { message } = req.body;
+  const pat = process.env.GITHUB_PAT;
+
+  if (!pat) return res.status(500).json({ error: "GitHub PAT not configured in cluster." });
+
+  try {
+    const response = await fetch(
+      "https://api.github.com/repos/priyanshuvatsyan/DevopsPlayground/actions/workflows/pipeline.yml/dispatches",
+      {
+        method: "POST",
+        headers: {
+          "Accept": "application/vnd.github+json",
+          "Authorization": `Bearer ${pat}`,
+          "X-GitHub-Api-Version": "2022-11-28",
+        },
+        body: JSON.stringify({
+          ref: "master",
+          inputs: { user_message: message },
+        }),
+      }
+    );
+
+    if (response.ok) {
+      res.json({ ok: true, status: "Pipeline triggered successfully. ETA 3-5 minutes." });
+    } else {
+      const errData = await response.text();
+      res.status(500).json({ error: "Failed to trigger pipeline", details: errData });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 const api = { getPods, getServices, deletePod, restartDeployment };
 export default api;

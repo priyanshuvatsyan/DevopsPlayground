@@ -29,6 +29,14 @@ spec:
           limits:
             cpu: "500m"     # Max limit: 50% of a core
             memory: "256Mi"
+        env:
+        - name: K8S_NAMESPACE
+          value: "devopsplayground"
+        - name: GITHUB_PAT
+          valueFrom:
+            secretKeyRef:
+              name: github-secrets
+              key: GITHUB_PAT
 
 ---
 apiVersion: v1

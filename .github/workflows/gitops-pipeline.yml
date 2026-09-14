@@ -8,13 +8,18 @@ on:
       - 'client/**'
       - 'server/**'
       - '.github/workflows/**'
-      # Explicitly ignoring the k8s folder prevents infinite build loops
       - '!k8s/**'
+  # ---> REQUIRED FOR UI: Allows the Node.js backend to trigger this pipeline via API
+  workflow_dispatch:
+    inputs:
+      user_message:
+        description: 'Message from the UI'
+        required: true
+        default: 'Hello Kubernetes'
 
 env:
   DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
   DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-  # Define two separate image repositories
   CLIENT_IMAGE: priyanshuvatsyan/devops-client
   SERVER_IMAGE: priyanshuvatsyan/devops-server
 
@@ -27,16 +32,28 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          # ---> REQUIRED FOR UI: Uses GITOPS_PAT so the bot has permission to commit the text file
+          token: ${{ secrets.GITOPS_PAT }}
+
+      # ---> REQUIRED FOR UI: Writes the message and commits it before building
+      - name: Apply User Change (UI Trigger Only)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          echo "${{ github.event.inputs.user_message }}" > server/message.txt
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add server/message.txt
+          git commit -m "chore: update message from UI trigger [skip ci]" || echo "No changes"
+          git push
 
       - name: Set Image Tag
         id: set_tag
         run: echo "tag=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
-      # ---> ADDED: Emulate ARM processor architecture
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
-      # ---> ADDED: Enable advanced multi-arch builds
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -46,27 +63,46 @@ jobs:
           username: ${{ env.DOCKER_USERNAME }}
           password: ${{ env.DOCKER_PASSWORD }}
 
-      # --- BUILD AND PUSH CLIENT ---
+      # 1. BUILD AND PUSH CLIENT
       - name: Build and Push Client Image
         uses: docker/build-push-action@v5
         with:
-          context: ./client   # Points to the client folder
+          context: ./client
           push: true
-          platforms: linux/arm64  # ---> ADDED: Target your Ubuntu VM architecture
+          platforms: linux/arm64
           tags: |
             ${{ env.CLIENT_IMAGE }}:${{ steps.set_tag.outputs.tag }}
             ${{ env.CLIENT_IMAGE }}:latest
 
-      # --- BUILD AND PUSH SERVER ---
+      # 2. BUILD AND PUSH SERVER
       - name: Build and Push Server Image
         uses: docker/build-push-action@v5
         with:
-          context: ./server   # Points to the server folder
+          context: ./server
           push: true
-          platforms: linux/arm64  # ---> ADDED: Target your Ubuntu VM architecture
+          platforms: linux/arm64
           tags: |
             ${{ env.SERVER_IMAGE }}:${{ steps.set_tag.outputs.tag }}
             ${{ env.SERVER_IMAGE }}:latest
+
+      # 3. IMAGE TESTING & SECURITY SCAN (Must run AFTER images exist in Docker Hub)
+      - name: Run Trivy Vulnerability Scanner (Client)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ env.CLIENT_IMAGE }}:${{ steps.set_tag.outputs.tag }}'
+          format: 'table'
+          exit-code: '0' 
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+
+      - name: Run Trivy Vulnerability Scanner (Server)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ env.SERVER_IMAGE }}:${{ steps.set_tag.outputs.tag }}'
+          format: 'table'
+          exit-code: '0' 
+          ignore-unfixed: true
+          vuln-type: 'os,library'
 
   update-manifests:
     needs: build-and-push
