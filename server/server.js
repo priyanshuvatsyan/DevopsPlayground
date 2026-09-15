@@ -224,7 +224,7 @@ app.post("/api/demo/trigger", async (req, res) => {
 
   try {
     const response = await fetch(
-      "https://api.github.com/repos/priyanshuvatsyan/DevopsPlayground/actions/workflows/pipeline.yml/dispatches",
+      "https://api.github.com/repos/priyanshuvatsyan/DevopsPlayground/actions/workflows/gitops-pipeline.yml/dispatches",
       {
         method: "POST",
         headers: {
