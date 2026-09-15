@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import * as k8s from "@kubernetes/client-node";
+import fs from "fs"; // <-- Added fs import
 
 const app = express();
 app.use(cors());
@@ -14,7 +15,6 @@ const kc = new k8s.KubeConfig();
 kc.loadFromDefault();
 const k8sApi = kc.makeApiClient(k8s.CoreV1Api);
 const k8sAppsApi = kc.makeApiClient(k8s.AppsV1Api);
-const k8sCustomApi = kc.makeApiClient(k8s.CustomObjectsApi);
 
 // Kubernetes resource names: lowercase alphanumerics and '-', RFC 1123 label.
 const K8S_NAME_RE = /^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$/;
@@ -25,11 +25,8 @@ function isValidK8sName(name) {
 
 function parseCpu(qty) {
   if (!qty) return null;
-  if (typeof qty === "number") return qty * 1000;
-  if (qty.endsWith("n")) return parseFloat(qty) / 1000000; // nanocores to millicores
-  if (qty.endsWith("u")) return parseFloat(qty) / 1000; // microcores to millicores
-  if (qty.endsWith("m")) return parseFloat(qty); // millicores
-  return parseFloat(qty) * 1000; // full cores to millicores
+  if (qty.endsWith("m")) return parseFloat(qty);
+  return parseFloat(qty) * 1000;
 }
 
 function parseMemoryToMi(qty) {
@@ -46,7 +43,7 @@ function deriveStatus(pod) {
   const phase = pod.status?.phase || "Unknown";
   const statuses = pod.status?.containerStatuses || [];
   const waitingReason = statuses.find((s) => s.state?.waiting)?.state.waiting.reason;
-  
+
   if (waitingReason === "CrashLoopBackOff" || waitingReason === "ImagePullBackOff") {
     return "Error";
   }
@@ -82,51 +79,20 @@ function ageFromTimestamp(ts) {
   return `${mins}m`;
 }
 
-async function getPodMetrics(namespace) {
-  try {
-    const res = await k8sCustomApi.listNamespacedCustomObject(
-      "metrics.k8s.io",
-      "v1beta1",
-      namespace,
-      "pods"
-    );
-    const byName = {};
-    res.body.items.forEach((item) => {
-      let cpuMilli = 0;
-      let memMi = 0;
-      item.containers.forEach((c) => {
-        cpuMilli += parseCpu(c.usage.cpu) || 0;
-        memMi += parseMemoryToMi(c.usage.memory) || 0;
-      });
-      byName[item.metadata.name] = { cpuMilli, memMi };
-    });
-    return byName;
-  } catch (err) {
-    return {}; // Returns empty if metrics-server is still booting or unavailable
-  }
-}
-
 app.get("/api/pods", async (req, res) => {
   try {
     const response = await k8sApi.listNamespacedPod(NAMESPACE);
     const items = response.body.items || [];
-    const metrics = await getPodMetrics(NAMESPACE);
-
-    let totalMemMi = 0;
 
     const pods = items.map((pod) => {
       const name = pod.metadata.name;
       const container = pod.spec?.containers?.[0];
       const limits = container?.resources?.limits || {};
-      
-      // Fallback limits: 1000m (1 CPU Core) and 512Mi if none exist in your YAML
-      const cpuLimitMilli = parseCpu(limits.cpu) || 1000; 
-      const memLimitMi = parseMemoryToMi(limits.memory) || 512; 
-      
-      const usage = metrics[name] || {};
-      if (usage.memMi) totalMemMi += usage.memMi;
+      const cpuLimitMilli = parseCpu(limits.cpu);
+      const memLimitMi = parseMemoryToMi(limits.memory);
 
-      const restarts = (pod.status?.containerStatuses || []).reduce((sum, c) => sum + (c.restartCount || 0), 0);
+      const restarts = (pod.status?.containerStatuses || [])
+        .reduce((sum, c) => sum + (c.restartCount || 0), 0);
 
       return {
         name,
@@ -138,19 +104,12 @@ app.get("/api/pods", async (req, res) => {
         deployment: pod.metadata.ownerReferences?.find((o) => o.kind === "ReplicaSet")
           ? pod.metadata.labels?.app || null
           : null,
-        // Calculate proper percentages using the usage and limits
-        cpuPercent: usage.cpuMilli != null ? Math.round((usage.cpuMilli / cpuLimitMilli) * 100) : 0,
-        memoryPercent: usage.memMi != null ? Math.round((usage.memMi / memLimitMi) * 100) : 0,
+        cpuPercent: null, // Requires metrics-server API integration
+        memoryPercent: null,
       };
     });
 
     const runningCount = pods.filter((p) => p.status === "Running").length;
-    
-    const cpuValues = pods.map((p) => p.cpuPercent).filter((v) => v !== null);
-    const cpuAvgPercent = cpuValues.length ? Math.round(cpuValues.reduce((a, b) => a + b, 0) / cpuValues.length) : 0;
-    
-    const memValues = pods.map((p) => p.memoryPercent).filter((v) => v !== null);
-    const memAvgPercent = memValues.length ? Math.round(memValues.reduce((a, b) => a + b, 0) / memValues.length) : 0;
 
     res.json({
       namespace: NAMESPACE,
@@ -158,10 +117,10 @@ app.get("/api/pods", async (req, res) => {
       summary: {
         runningCount,
         totalCount: pods.length,
-        cpuAvgPercent,
-        memoryUsedGb: (totalMemMi / 1024).toFixed(2),
-        memoryTotalGb: ((pods.length * 512) / 1024).toFixed(2),
-        memoryPercent: memAvgPercent,
+        cpuAvgPercent: null,
+        memoryUsedGb: null,
+        memoryTotalGb: null,
+        memoryPercent: null,
         clusterName: kc.getCurrentCluster()?.name || "local-cluster",
         healthy: pods.every((p) => p.status === "Running" || p.status === "Pending"),
       },
@@ -247,33 +206,53 @@ app.post("/api/deployments/:name/restart", async (req, res) => {
   }
 });
 
-app.get("/healthz", (req, res) => res.json({ ok: true }));
-
-app.post("/api/chaos/stress", (req, res) => {
-  // Run the stress test for 45 seconds to ensure the HPA metrics-server catches it
-  const duration = req.body.duration || 45000; 
-  const end = Date.now() + duration;
-
-  function burnCPU() {
-    if (Date.now() >= end) return;
-    
-    // Burn CPU intensely for 50ms
-    const chunkEnd = Date.now() + 50;
-    while (Date.now() < chunkEnd) {
-      Math.sqrt(Math.random() * Math.random());
-    }
-    
-    // Yield to the event loop so the dashboard doesn't freeze, then immediately resume
-    setTimeout(burnCPU, 0); 
+// --- NEW GITOPS ROUTES ADDED HERE ---
+app.get("/api/demo/message", (req, res) => {
+  try {
+    const msg = fs.readFileSync("message.txt", "utf8");
+    res.json({ message: msg });
+  } catch (err) {
+    res.json({ message: "Default System Message" });
   }
-  
-  burnCPU();
-  res.json({ ok: true, message: `CPU stress initiated for ${duration / 1000} seconds.` });
 });
+
+app.post("/api/demo/trigger", async (req, res) => {
+  const { message } = req.body;
+  const pat = process.env.GITHUB_PAT;
+
+  if (!pat) return res.status(500).json({ error: "GitHub PAT not configured in cluster." });
+
+  try {
+    const response = await fetch(
+      "https://api.github.com/repos/priyanshuvatsyan/DevopsPlayground/actions/workflows/pipeline.yml/dispatches",
+      {
+        method: "POST",
+        headers: {
+          "Accept": "application/vnd.github+json",
+          "Authorization": `Bearer ${pat}`,
+          "X-GitHub-Api-Version": "2022-11-28",
+        },
+        body: JSON.stringify({
+          ref: "master",
+          inputs: { user_message: message },
+        }),
+      }
+    );
+
+    if (response.ok) {
+      res.json({ ok: true, status: "Pipeline triggered successfully." });
+    } else {
+      const errData = await response.text();
+      res.status(500).json({ error: "Failed to trigger pipeline", details: errData });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+// --- END NEW GITOPS ROUTES ---
+
+app.get("/healthz", (req, res) => res.json({ ok: true }));
 
 app.listen(PORT, () => {
   console.log(`DevOps Playground API listening on :${PORT} (namespace: ${NAMESPACE})`);
 });
-
-
-//end
