@@ -15,6 +15,7 @@ export default function CICD() {
     { id: 4, name: 'Push Image', meta: 'Docker Hub' },
     { id: 5, name: 'Argo CD Sync', meta: 'K8s Deployment' }
   ];
+  
 
   // Fetch current live message from Kubernetes
   const fetchMessage = async () => {
