@@ -19,7 +19,7 @@ spec:
       serviceAccountName: default 
       containers:
       - name: server
-        image: priyanshuvatsyan/devops-server:47f6045
+        image: priyanshuvatsyan/devops-server:fab137d
         ports:
         - containerPort: 4000
         resources:
