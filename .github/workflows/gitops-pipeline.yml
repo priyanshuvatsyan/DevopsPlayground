@@ -117,6 +117,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITOPS_PAT }}
+          ref: master # <--- Forces checkout of the latest master branch
 
       - name: Update Kubernetes Deployment YAML
         env:
