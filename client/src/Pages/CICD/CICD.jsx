@@ -17,11 +17,12 @@ export default function CICD() {
     { id: 5, name: 'Pod Rollout', meta: 'Waiting for K8s...' } 
   ];
 
-  const fetchMessage = async () => {
+const fetchMessage = async () => {
     try {
       const res = await fetch('/api/demo/message');
       const data = await res.json();
-      setCurrentMsg(data.message);
+      // ADDED .trim() HERE to remove hidden newlines/spaces
+      setCurrentMsg(data.message.trim()); 
     } catch (err) {
       console.error("Failed to fetch message", err);
     }
