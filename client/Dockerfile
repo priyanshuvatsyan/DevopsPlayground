@@ -18,8 +18,8 @@ RUN npm run build
 # Production stage
 FROM node:18-alpine
 
-# Install a simple HTTP server to serve static files
-RUN npm install -g http-server
+#  Install 'serve' instead of 'http-server'
+RUN npm install -g serve
 
 WORKDIR /app
 
@@ -32,5 +32,5 @@ EXPOSE 5173
 # Set environment
 ENV NODE_ENV=production
 
-# Start server
-CMD ["http-server", "dist", "-p", "5173", "--cors"]
+# ---> CHANGED: Use 'serve -s' (Single Page Application mode) to route 404s to index.html
+CMD ["serve", "-s", "dist", "-l", "5173", "--cors"]
