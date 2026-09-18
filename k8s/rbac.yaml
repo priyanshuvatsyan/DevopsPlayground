@@ -1,4 +1,4 @@
----
+# 1. YOUR UPDATED ROLE (Added statefulsets and daemonsets)
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -9,12 +9,14 @@ rules:
   resources: ["pods", "services"]
   verbs: ["get", "list", "watch", "delete"]
 - apiGroups: ["apps"]
-  resources: ["deployments"]
+  # ---> ADDED: statefulsets and daemonsets
+  resources: ["deployments", "statefulsets", "daemonsets"] 
   verbs: ["get", "list", "watch", "patch"]
 - apiGroups: ["metrics.k8s.io"]
   resources: ["pods"]
   verbs: ["get", "list"]
 ---
+# 2. YOUR EXISTING ROLE BINDING (Unchanged)
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
@@ -27,4 +29,28 @@ subjects:
 roleRef:
   kind: Role
   name: devops-playground-role
+  apiGroup: rbac.authorization.k8s.io
+---
+# 3. NEW CLUSTER ROLE (Required to read across into the argocd namespace)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: devops-argocd-reader
+rules:
+- apiGroups: ["argoproj.io"]
+  resources: ["applications"]
+  verbs: ["get", "list", "watch"]
+---
+# 4. NEW CLUSTER ROLE BINDING (Connects the Argo CD reader to your default SA)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: devops-argocd-reader-binding
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: devopsplayground
+roleRef:
+  kind: ClusterRole
+  name: devops-argocd-reader
   apiGroup: rbac.authorization.k8s.io
