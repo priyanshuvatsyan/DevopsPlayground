@@ -10,14 +10,15 @@ app.use(express.json());
 const PORT = process.env.PORT || 4000;
 const NAMESPACE = process.env.K8S_NAMESPACE || "default";
 
-// Add this near your existing k8sApi and k8sAppsApi declarations
-const k8sCustomApi = kc.makeApiClient(k8s.CustomObjectsApi);
+
 
 // Initialize the native Kubernetes Client
 const kc = new k8s.KubeConfig();
 kc.loadFromDefault();
 const k8sApi = kc.makeApiClient(k8s.CoreV1Api);
 const k8sAppsApi = kc.makeApiClient(k8s.AppsV1Api);
+// Add this near your existing k8sApi and k8sAppsApi declarations
+const k8sCustomApi = kc.makeApiClient(k8s.CustomObjectsApi);
 
 // Kubernetes resource names: lowercase alphanumerics and '-', RFC 1123 label.
 const K8S_NAME_RE = /^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$/;
