@@ -1,0 +1,216 @@
+.gitops-wrapper {
+  background-color: #f8f9fa;
+  background-image: 
+    linear-gradient(to right, #e9ecef 1px, transparent 1px),
+    linear-gradient(to bottom, #e9ecef 1px, transparent 1px);
+  background-size: 40px 40px;
+  min-height: 100vh;
+  padding: 30px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.gitops-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.gitops-page-header h1 {
+  font-size: 1.5rem;
+  color: #172b4d;
+  margin: 0;
+}
+
+/* Dashboard Layout */
+.gitops-dashboard {
+  display: flex;
+  gap: 40px; /* Increased gap slightly for wider screens */
+  align-items: stretch;
+  justify-content: center;
+  max-width: 100%; /* Changed from 1200px to expand fully */
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Panel Cards */
+.panel-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  border: 1px solid #dfe1e6;
+  flex: 1; /* This will now stretch to fill the remaining space */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* Removed max-width: 400px; */
+  min-height: 650px; /* Added to give a taller baseline */
+}
+
+/* Scrollable Lists */
+.panel-list {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 70vh; /* Changed from 450px to 70% of your browser window's height */
+}
+
+.panel-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #dfe1e6;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.panel-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: #172b4d;
+  font-size: 0.95rem;
+}
+
+.panel-title .icon {
+  color: #4c9aff;
+}
+
+.panel-badge {
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: #6b778c;
+}
+
+.panel-subheader {
+  padding: 12px 20px;
+  font-family: monospace;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border-bottom: 1px solid #dfe1e6;
+}
+
+.text-blue { color: #0052cc; }
+.text-green { color: #36b37e; }
+.text-purple { color: #6554c0; }
+.text-gray { color: #6b778c; }
+
+
+
+.list-item {
+  padding: 16px 20px;
+  border-bottom: 1px solid #dfe1e6;
+}
+
+.list-item:last-child {
+  border-bottom: none;
+}
+
+/* Commit Styling */
+.commit-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-family: monospace;
+  font-size: 0.85rem;
+}
+
+.commit-hash {
+  color: #42526e;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.head-badge {
+  background: #deebff;
+  color: #0052cc;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  border: 1px solid #b3d4ff;
+}
+
+.commit-time { color: #8993a4; }
+.commit-msg { 
+  font-size: 0.9rem; 
+  color: #172b4d;
+  margin: 0 0 4px 0;
+}
+.commit-author { 
+  font-family: monospace; 
+  font-size: 0.8rem; 
+  color: #6b778c; 
+}
+
+/* Resource Styling */
+.resource-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  font-size: 0.9rem;
+}
+
+.resource-name span { color: #6b778c; margin-right: 6px; }
+.resource-name strong { color: #172b4d; }
+.resource-status { font-family: monospace; color: #36b37e; font-weight: 600; }
+.resource-image { font-family: monospace; font-size: 0.8rem; color: #6b778c; }
+
+/* Center Sync Column */
+.sync-center {
+  width: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.sync-label {
+  font-family: monospace;
+  color: #6b778c;
+  margin-bottom: 16px;
+}
+
+.sync-circle {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 2px solid #36b37e;
+  background: #e3fcef;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #36b37e;
+  margin-bottom: 12px;
+}
+
+.sync-status {
+  color: #36b37e;
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 16px;
+}
+
+.btn-force-sync {
+  background: #e3fcef;
+  color: #006644;
+  border: 1px solid #36b37e;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 24px;
+  transition: all 0.2s;
+}
+
+.btn-force-sync:hover {
+  background: #36b37e;
+  color: white;
+}
+
+.sync-flow p {
+  margin: 4px 0;
+  font-family: monospace;
+  font-size: 0.85rem;
+}

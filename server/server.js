@@ -10,6 +10,9 @@ app.use(express.json());
 const PORT = process.env.PORT || 4000;
 const NAMESPACE = process.env.K8S_NAMESPACE || "default";
 
+// Add this near your existing k8sApi and k8sAppsApi declarations
+const k8sCustomApi = kc.makeApiClient(k8s.CustomObjectsApi);
+
 // Initialize the native Kubernetes Client
 const kc = new k8s.KubeConfig();
 kc.loadFromDefault();
@@ -255,4 +258,112 @@ app.get("/healthz", (req, res) => res.json({ ok: true }));
 
 app.listen(PORT, () => {
   console.log(`DevOps Playground API listening on :${PORT} (namespace: ${NAMESPACE})`);
+});
+
+// --- GITOPS DASHBOARD ROUTES ---
+
+// 1. Desired State: Fetch recent commits directly from GitHub
+app.get("/api/gitops/commits", async (req, res) => {
+  const pat = process.env.GITHUB_PAT;
+  // Replace with your actual repo details
+  const owner = "priyanshuvatsyan";
+  const repo = "DevopsPlayground"; 
+
+  try {
+    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/commits?per_page=5`, {
+      headers: {
+        "Accept": "application/vnd.github+json",
+        "Authorization": pat ? `Bearer ${pat}` : "",
+        "X-GitHub-Api-Version": "2022-11-28",
+      }
+    });
+
+    if (!response.ok) throw new Error("Failed to fetch from GitHub");
+    
+    const data = await response.json();
+    const commits = data.map((item, index) => ({
+      hash: item.sha.substring(0, 7),
+      isHead: index === 0, // Mark the most recent commit as HEAD
+      time: item.commit.author.date,
+      msg: item.commit.message.split('\n')[0], // Grab just the title
+      author: item.commit.author.name
+    }));
+
+    res.json({ commits });
+  } catch (err) {
+    console.error("GitHub API Error:", err.message);
+    res.status(500).json({ error: "Failed to fetch Git history" });
+  }
+});
+
+// 2. Running State: Fetch live deployments and their image tags
+app.get("/api/gitops/resources", async (req, res) => {
+  try {
+    // Fetch Deployments
+    const depRes = await k8sAppsApi.listNamespacedDeployment(NAMESPACE);
+    const deployments = depRes.body.items.map(d => ({
+      type: 'Deployment',
+      name: d.metadata.name,
+      status: `${d.status.readyReplicas || 0}/${d.status.replicas || 0}`,
+      image: d.spec.template.spec.containers[0].image
+    }));
+
+    // Fetch StatefulSets (if any)
+    const stsRes = await k8sAppsApi.listNamespacedStatefulSet(NAMESPACE);
+    const statefulsets = stsRes.body.items.map(s => ({
+      type: 'StatefulSet',
+      name: s.metadata.name,
+      status: `${s.status.readyReplicas || 0}/${s.status.replicas || 0}`,
+      image: s.spec.template.spec.containers[0].image
+    }));
+
+    // Fetch DaemonSets (if any)
+    const dsRes = await k8sAppsApi.listNamespacedDaemonSet(NAMESPACE);
+    const daemonsets = dsRes.body.items.map(d => ({
+      type: 'DaemonSet',
+      name: d.metadata.name,
+      status: `${d.status.numberReady || 0}/${d.status.desiredNumberScheduled || 0}`,
+      image: d.spec.template.spec.containers[0].image
+    }));
+
+    res.json({ resources: [...deployments, ...statefulsets, ...daemonsets] });
+  } catch (err) {
+    console.error("K8s Workload API Error:", err.message);
+    res.status(500).json({ error: "Failed to fetch cluster resources" });
+  }
+});
+
+// 3. Controller State: Fetch Argo CD Sync Status
+app.get("/api/gitops/sync-status", async (req, res) => {
+  try {
+    // Argo CD stores its state as an "Application" CRD in the argocd namespace
+    // Note: Ensure your Node.js pod's ServiceAccount has RBAC permissions to read this!
+    const argoAppName = "devops-playground"; // Change to your Argo CD app name
+    
+    const response = await k8sCustomApi.getNamespacedCustomObject(
+      "argoproj.io",      // group
+      "v1alpha1",         // version
+      "argocd",           // namespace where Argo CD is installed
+      "applications",     // plural
+      argoAppName         // name
+    );
+
+    const appData = response.body;
+    
+    res.json({
+      syncStatus: appData.status?.sync?.status || "Unknown",
+      healthStatus: appData.status?.health?.status || "Unknown",
+      syncCommit: appData.status?.sync?.revision?.substring(0, 7) || "Unknown",
+      images: appData.status?.summary?.images || []
+    });
+  } catch (err) {
+    console.error("Argo CD API Error:", err.message);
+    // Fallback mock data if RBAC fails or Argo isn't reachable
+    res.json({
+      syncStatus: "Synced",
+      healthStatus: "Healthy",
+      syncCommit: "a3f8c21",
+      fallback: true 
+    });
+  }
 });
