@@ -5,6 +5,7 @@ import Home from './Pages/Home/Home';
 import ChaosMode from './Pages/Chaos/Chaos';
 import CICD from './Pages/CICD/CICD';
 import GitOps from './Pages/GitOps/GitOps';
+import Monitoring from './Pages/Monitoring/Monitoring';
 import './App.css';
 
 function App() {
@@ -24,6 +25,7 @@ function App() {
               <Route path="/chaos" element={<ChaosMode />} />
               <Route path="/cicd" element={<CICD />} />
               <Route path="/gitops" element={<GitOps />} />
+              <Route path="/monitoring" element={<Monitoring />} />
             </Routes>
           </main>
         </div>
