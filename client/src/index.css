@@ -6,13 +6,14 @@ html, body {
   padding: 0;
   width: 100%;
   height: 100%;
+  overflow: hidden;
   background-color: #eef1f6; /* Sets the global background to your dashboard color */
 }
 
 /* 2. Force the React root div to stretch edge-to-edge */
 #root {
   width: 100%;
-  min-height: 100vh;
+  height: 100%;
   margin: 0;
   padding: 0;
   max-width: none; /* Overrides any lingering Vite defaults */
