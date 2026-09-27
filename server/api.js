@@ -330,13 +330,11 @@ export async function getClusterMetrics(req, res) {
 
 export async function getClusterLogs(req, res) {
   try {
-    // 1. Get all pods in the namespace
     const podsRes = await k8sApi.listNamespacedPod(NAMESPACE);
     const pods = podsRes.body.items;
 
     let allLogs = [];
 
-    // 2. Fetch recent logs for each pod concurrently
     await Promise.all(pods.map(async (pod) => {
       try {
         const logRes = await k8sApi.readNamespacedPodLog(
@@ -348,15 +346,13 @@ export async function getClusterLogs(req, res) {
           undefined, // pretty
           undefined, // previous
           undefined, // sinceSeconds
-          50,        // tailLines (fetch last 50 lines to keep it fast)
-          true       // timestamps (crucial for sorting)
+          50,        // tailLines
+          true       // timestamps
         );
 
-        // K8s returns a giant string. Split by newline.
         const lines = logRes.body.split('\n').filter(Boolean);
         
         lines.forEach(line => {
-          // K8s prepends the ISO timestamp and a space when timestamps=true
           const spaceIdx = line.indexOf(' ');
           if (spaceIdx === -1) return;
 
@@ -364,33 +360,31 @@ export async function getClusterLogs(req, res) {
           const msg = line.substring(spaceIdx + 1);
           const timeObj = new Date(timestampStr);
 
-          // Basic heuristic for log levels
           let level = 'INFO';
           const msgLower = msg.toLowerCase();
           if (msgLower.includes('error') || msgLower.includes('refused') || msgLower.includes('fail')) level = 'ERROR';
           else if (msgLower.includes('warn')) level = 'WARN';
 
-          // Format the time to match the UI (HH:MM:SS.ms)
           const timeFormat = `${timeObj.getHours().toString().padStart(2, '0')}:${timeObj.getMinutes().toString().padStart(2, '0')}:${timeObj.getSeconds().toString().padStart(2, '0')}.${timeObj.getMilliseconds().toString().padStart(3, '0')}`;
 
           allLogs.push({
-            rawTime: timeObj.getTime(), // Used for sorting
+            rawTime: timeObj.getTime(),
             time: timeFormat,
             level: level,
-            // Truncate the random pod hash (e.g., api-server-7d9f8b -> api-server)
             source: pod.metadata.name.split('-').slice(0, 2).join('-'), 
             msg: msg
           });
         });
       } catch (e) {
-        // Ignore pods that might be initializing or have no logs yet
+        // THIS IS THE CRITICAL FIX: Force the server to print the exact error
+        console.error(`Log fetch failed for ${pod.metadata.name}:`, e.message);
+        if (e.response && e.response.body) {
+          console.error("K8s API Reason:", e.response.body.message);
+        }
       }
     }));
 
-    // 3. Sort chronologically by the raw timestamp
     allLogs.sort((a, b) => a.rawTime - b.rawTime);
-
-    // 4. Return the latest 100 aggregated logs
     res.json({ logs: allLogs.slice(-100) });
   } catch (err) {
     console.error("GET /api/monitoring/logs failed:", err.message);
