@@ -6,7 +6,7 @@ import ChaosMode from './Pages/Chaos/Chaos';
 import CICD from './Pages/CICD/CICD';
 import GitOps from './Pages/GitOps/GitOps';
 import Monitoring from './Pages/Monitoring/Monitoring';
-import ClusterLogs from './Pages/Logs/Logs';
+import ContainerLogs from './Pages/ContainerLogs/ContainerLogs';
 import './App.css';
 
 function App() {
@@ -26,7 +26,7 @@ function App() {
               <Route path="/cicd" element={<CICD />} />
               <Route path="/gitops" element={<GitOps />} />
               <Route path="/monitoring" element={<Monitoring />} />
-              <Route path="/logs" element={<ClusterLogs />} />
+              <Route path="/logs" element={<ContainerLogs />} />
             </Routes>
           </main>
         </div>
