@@ -342,6 +342,7 @@ export async function getClusterLogs(req, res) {
           NAMESPACE,
           undefined, // container
           undefined, // follow
+          undefined, // insecureSkipTLSVerifyBackend (The missing parameter!)
           undefined, // limitBytes
           undefined, // pretty
           undefined, // previous
