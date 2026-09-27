@@ -24,6 +24,7 @@ app.get("/api/gitops/sync-status", api.getGitOpsSyncStatus);
 app.get("/api/monitoring/http-metrics", api.getHttpMetrics);
 app.get("/healthz", api.healthCheck);
 app.get("/api/monitoring/cluster-metrics", api.getClusterMetrics);
+app.get("/api/monitoring/logs", api.getClusterLogs);
 
 app.listen(PORT, () => {
   console.log(`DevOps Playground API listening on :${PORT}`);

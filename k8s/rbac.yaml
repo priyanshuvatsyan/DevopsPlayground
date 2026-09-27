@@ -6,7 +6,7 @@ metadata:
   namespace: devopsplayground
 rules:
 - apiGroups: [""]
-  resources: ["pods", "services"]
+  resources: ["pods", "services", "pods/log"]
   verbs: ["get", "list", "watch", "delete"]
 - apiGroups: ["apps"]
   # ---> ADDED: statefulsets and daemonsets
