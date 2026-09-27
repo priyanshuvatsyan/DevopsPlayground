@@ -22,7 +22,6 @@ function App() {
           <main className="app-main">
             <Routes>
               <Route path="/" element={<Home />} />
-              <Route path="/kubernetes" element={<h2>Kubernetes Page Coming Soon</h2>} />
               <Route path="/chaos" element={<ChaosMode />} />
               <Route path="/cicd" element={<CICD />} />
               <Route path="/gitops" element={<GitOps />} />
