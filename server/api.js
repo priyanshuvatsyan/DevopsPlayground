@@ -5,7 +5,7 @@ import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import { getMetricsData } from "./utils/metrics.js";
 
-const NAMESPACE = process.env.K8S_NAMESPACE || "default";
+const NAMESPACE = process.env.K8S_NAMESPACE || "devopsplayground";
 const MESSAGE_FILE = fileURLToPath(new URL("./message.txt", import.meta.url));
 
 const kc = new k8s.KubeConfig();
