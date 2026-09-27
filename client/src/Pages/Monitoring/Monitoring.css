@@ -1,0 +1,135 @@
+/* Monitoring.css */
+
+/* Main Page Wrapper */
+.monitoring-wrapper {
+  background-color: #f8f9fa;
+  background-image: 
+    linear-gradient(to right, #e9ecef 1px, transparent 1px),
+    linear-gradient(to bottom, #e9ecef 1px, transparent 1px);
+  background-size: 40px 40px;
+  min-height: 100vh;
+  padding: 30px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  box-sizing: border-box;
+}
+
+/* Header Section */
+.monitoring-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.monitoring-header h1 {
+  font-size: 1.5rem;
+  color: #172b4d;
+  margin: 0;
+}
+
+/* 2x2 Grid for Metric Cards */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  margin-bottom: 24px;
+  width: 100%;
+}
+
+/* Individual Metric Card */
+.metric-card {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #dfe1e6;
+  padding: 24px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+  display: flex;
+  flex-direction: column;
+}
+
+.metric-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  margin-bottom: 20px;
+  color: #42526e;
+  font-size: 0.95rem;
+}
+
+/* Container for Recharts */
+.mock-chart {
+  height: 140px; /* Forces Recharts to respect a specific height */
+  width: 100%;
+  margin-top: auto;
+}
+
+/* Color Utility Classes */
+.text-blue { color: #0052cc; font-size: 1.1rem; }
+.text-purple { color: #6554c0; font-size: 1.1rem; }
+.text-green { color: #36b37e; font-size: 1.1rem; }
+.text-orange { color: #ff991f; font-size: 1.1rem; }
+.text-red { color: #ff5630; }
+
+/* Request Breakdown Table */
+.breakdown-card {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #dfe1e6;
+  padding: 24px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+}
+
+.breakdown-card h3 {
+  margin: 0 0 20px 0;
+  color: #172b4d;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.breakdown-list {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Table Rows using Flexbox */
+.breakdown-row {
+  display: flex;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f4f5f7;
+  font-size: 0.95rem;
+}
+
+.breakdown-row:last-child {
+  border-bottom: none;
+}
+
+/* Table Columns */
+.row-hits {
+  width: 60px;
+  font-weight: 600;
+  font-family: monospace;
+}
+
+.row-route {
+  flex: 1;
+  font-family: monospace;
+  color: #42526e;
+  letter-spacing: 0.5px;
+}
+
+.row-time {
+  width: 80px;
+  text-align: right;
+  margin-right: 24px;
+  color: #6b778c;
+  font-family: monospace;
+}
+
+.row-status {
+  width: 50px;
+  text-align: right;
+  font-weight: 600;
+  font-family: monospace;
+}
