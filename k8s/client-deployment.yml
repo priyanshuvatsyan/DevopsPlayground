@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: client
-        image: priyanshuvatsyan/devops-client:1dfc0d3
+        image: priyanshuvatsyan/devops-client:fe8d1b5
         ports:
         - containerPort: 5173 # <-- Updated to match your container
         resources:
