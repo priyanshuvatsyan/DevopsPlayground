@@ -416,28 +416,46 @@ export function triggerCpuStress(req, res) {
   res.json({ ok: true, message: "CPU stress initiated for 45 seconds." });
 }
 
-// Add to the bottom of server/api.js
-
 export async function scaleToZero(req, res) {
   const { name } = req.params;
   if (!isValidK8sName(name)) return res.status(400).json({ error: "Invalid deployment name." });
 
-  try {
+  const CHAOS_DURATION_MS = 30 * 1000; // 30 second outage
+
+  // Helper function to patch replicas
+  const patchReplicas = async (count) => {
     const patch = [{
       op: "replace",
       path: "/spec/replicas",
-      value: 0
+      value: count
     }];
     const options = { headers: { "Content-type": k8s.PatchUtils.PATCH_FORMAT_JSON_PATCH } };
     
-    await k8sAppsApi.patchNamespacedDeployment(
+    return k8sAppsApi.patchNamespacedDeployment(
       name, NAMESPACE, patch, undefined, undefined, undefined, undefined, undefined, options
     );
-    
-    res.json({ ok: true, message: `Scaled deployment ${name} to 0 replicas.` });
+  };
+
+  try {
+    // 1. Induce the Fault: Scale to Zero
+    console.log(`[CHAOS ENGINEER] Scaling ${name} to 0. Outage started.`);
+    await patchReplicas(0);
+
+    // 2. Schedule the Self-Healing: Scale back to 1 automatically after 30s
+    setTimeout(async () => {
+      try {
+        console.log(`[CHAOS ENGINEER] Outage duration complete. Automatically restoring ${name} to 1 replica to initiate self-healing.`);
+        await patchReplicas(1);
+        // Once 1 replica is running, HPA and Ingress loop can recover fully.
+      } catch (recoveryError) {
+        console.error(`[CHAOS ENGINEER] Critical Error: Automated recovery for ${name} failed!`, recoveryError.message);
+      }
+    }, CHAOS_DURATION_MS);
+
+    res.json({ ok: true, message: `Chaos experiment started: Scaled deployment ${name} to 0. Automatic recovery scheduled in 30 seconds.` });
   } catch (err) {
-    console.error(`Scale to zero failed for ${name}:`, err.message);
-    res.status(500).json({ error: "Failed to scale deployment." });
+    console.error(`Scale to zero experiment failed for ${name}:`, err.message);
+    res.status(500).json({ error: "Failed to start scale to zero experiment." });
   }
 }
 
@@ -462,6 +480,39 @@ export async function rollbackDeploymentTarget(req, res) {
   } catch (err) {
     console.error(`Rollback failed for ${name}:`, err.message);
     res.status(500).json({ error: "Failed to rollback deployment." });
+  }
+}
+
+export async function getClusterInfo(req, res) {
+  try {
+    // 1. Get the current cluster context name (or fallback)
+    const clusterName = kc.getCurrentCluster()?.name || "local-cluster";
+
+    // 2. Fetch all nodes and count how many are marked 'Ready'
+    const nodesRes = await k8sApi.listNode();
+    const totalNodes = nodesRes.body.items.length;
+    const readyNodes = nodesRes.body.items.filter(node => {
+      const readyCondition = node.status.conditions.find(c => c.type === 'Ready');
+      return readyCondition && readyCondition.status === 'True';
+    }).length;
+
+    // 3. Fetch all namespaces
+    const nsRes = await k8sApi.listNamespace();
+    const totalNamespaces = nsRes.body.items.length;
+
+    res.json({
+      clusterName: clusterName,
+      nodes: { ready: readyNodes, total: totalNodes },
+      namespaces: totalNamespaces
+    });
+  } catch (err) {
+    console.error("GET /api/cluster/info failed:", err.message);
+    // Fallback gracefully so the UI doesn't crash if RBAC is temporarily missing
+    res.json({
+      clusterName: kc.getCurrentCluster()?.name || "cluster-prod-01",
+      nodes: { ready: 0, total: 0 },
+      namespaces: 0
+    });
   }
 }
 

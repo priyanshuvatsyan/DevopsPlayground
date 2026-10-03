@@ -65,7 +65,8 @@ export default function Chaos() {
       id: 'scale-zero',
       title: 'Scale to Zero',
       target: 'devops-client deployment',
-      desc: isScaling ? 'Scaling down...' : 'Sets replica count to 0 to simulate full outage.',
+      // Update the description here
+      desc: isScaling ? 'Outage in progress. 30s automated recovery scheduled...' : 'Induced outage (replicas: 0). Automated recovery triggers in 30s.',
       theme: 'green',
       icon: <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none"><path d="M12 22l-4-8h8z"></path></svg>
     }
@@ -257,18 +258,7 @@ export default function Chaos() {
 
       {/* MAIN CARDS */}
       <div className="chaos-main-card">
-        <div className="chaos-banner">
-          <div className="banner-content">
-            <svg viewBox="0 0 24 24" width="20" height="20" stroke="#ff991f" strokeWidth="2" fill="none" className="banner-icon">
-              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-            </svg>
-            <div>
-              <h2>Chaos Engineering</h2>
-              <p>Controlled fault injection to test system resilience. All actions are logged.</p>
-            </div>
-          </div>
-          <span className="caution-badge">USE WITH CAUTION</span>
-        </div>
+        
 
         <div className="chaos-grid">
           {chaosExperiments.map((exp) => (

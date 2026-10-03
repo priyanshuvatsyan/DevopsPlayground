@@ -31,26 +31,29 @@ roleRef:
   name: devops-playground-role
   apiGroup: rbac.authorization.k8s.io
 ---
-# 3. NEW CLUSTER ROLE (Required to read across into the argocd namespace)
+# 3. CLUSTER ROLE (Required to read Argo CD apps, plus Cluster Nodes & Namespaces)
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: devops-argocd-reader
+  name: devops-cluster-reader
 rules:
 - apiGroups: ["argoproj.io"]
   resources: ["applications"]
   verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["nodes", "namespaces"]
+  verbs: ["get", "list"]
 ---
-# 4. NEW CLUSTER ROLE BINDING (Connects the Argo CD reader to your default SA)
+# 4. CLUSTER ROLE BINDING
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: devops-argocd-reader-binding
+  name: devops-cluster-reader-binding
 subjects:
 - kind: ServiceAccount
   name: default
   namespace: devopsplayground
 roleRef:
   kind: ClusterRole
-  name: devops-argocd-reader
+  name: devops-cluster-reader
   apiGroup: rbac.authorization.k8s.io

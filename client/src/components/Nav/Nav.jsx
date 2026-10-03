@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
   Hexagon, 
@@ -8,10 +9,33 @@ import {
   Star, 
   Settings 
 } from 'lucide-react';
-import Home from '../../Pages/Home/Home';
 import './Nav.css';
 
 export default function Nav() {
+  const [clusterData, setClusterData] = useState({
+    clusterName: 'loading...',
+    nodes: { ready: '-', total: '-' },
+    namespaces: '-'
+  });
+
+  useEffect(() => {
+    const fetchClusterInfo = async () => {
+      try {
+        const res = await fetch('/api/cluster/info');
+        if (res.ok) {
+          const data = await res.json();
+          setClusterData(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch cluster info", err);
+      }
+    };
+
+    fetchClusterInfo();
+    const interval = setInterval(fetchClusterInfo, 30000); 
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <nav className="sidebar-nav">
       {/* Top Header Section */}
@@ -26,8 +50,8 @@ export default function Nav() {
           </div>
         </div>
         <div className="cluster-status">
-          <span className="status-dot"></span>
-          <span className="status-text">cluster-prod-01</span>
+          <span className="status-dot healthy"></span>
+          <span className="status-text">{clusterData.clusterName}</span>
         </div>
       </div>
 
@@ -86,28 +110,21 @@ export default function Nav() {
             </li>
           </ul>
         </div>
-
-        {/* <div className="nav-section">
-          <span className="section-label">SYSTEM</span>
-          <ul className="nav-list">
-            <li>
-              <NavLink to="/settings" className="nav-link">
-                <Settings className="nav-icon" size={18} /> Settings
-              </NavLink>
-            </li>
-          </ul>
-        </div> */}
       </div>
 
       {/* Bottom Footer Section */}
       <div className="nav-footer">
         <div className="footer-stat">
           <span>Nodes</span>
-          <span className="stat-value text-green">3/3</span>
+          <span className="stat-value text-green">
+            {clusterData.nodes.ready}/{clusterData.nodes.total}
+          </span>
         </div>
         <div className="footer-stat">
           <span>Namespaces</span>
-          <span className="stat-value text-blue">8</span>
+          <span className="stat-value text-blue">
+            {clusterData.namespaces}
+          </span>
         </div>
       </div>
     </nav>
