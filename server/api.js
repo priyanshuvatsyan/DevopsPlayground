@@ -4,6 +4,7 @@ import * as k8s from "@kubernetes/client-node";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import { getMetricsData } from "./utils/metrics.js";
+import crypto from "crypto";
 
 const NAMESPACE = process.env.K8S_NAMESPACE || "devopsplayground";
 const MESSAGE_FILE = fileURLToPath(new URL("./message.txt", import.meta.url));
@@ -390,6 +391,77 @@ export async function getClusterLogs(req, res) {
   } catch (err) {
     console.error("GET /api/monitoring/logs failed:", err.message);
     res.status(500).json({ error: "Failed to fetch logs" });
+  }
+}
+
+export function triggerCpuStress(req, res) {
+  const DURATION_MS = 45 * 1000; // 45 seconds
+  const end = Date.now() + DURATION_MS;
+
+  // This function continuously chains heavy cryptographic hashing
+  const burnCPU = () => {
+    if (Date.now() < end) {
+      // pbkdf2 offloads CPU-intensive work to the libuv threadpool
+      crypto.pbkdf2("chaos-engineering", "salt", 100000, 64, "sha512", () => {
+        burnCPU(); 
+      });
+    }
+  };
+
+  // Node's default threadpool size is 4. Spin up 4 concurrent burners to max out the CPU.
+  for (let i = 0; i < 4; i++) {
+    burnCPU();
+  }
+
+  res.json({ ok: true, message: "CPU stress initiated for 45 seconds." });
+}
+
+// Add to the bottom of server/api.js
+
+export async function scaleToZero(req, res) {
+  const { name } = req.params;
+  if (!isValidK8sName(name)) return res.status(400).json({ error: "Invalid deployment name." });
+
+  try {
+    const patch = [{
+      op: "replace",
+      path: "/spec/replicas",
+      value: 0
+    }];
+    const options = { headers: { "Content-type": k8s.PatchUtils.PATCH_FORMAT_JSON_PATCH } };
+    
+    await k8sAppsApi.patchNamespacedDeployment(
+      name, NAMESPACE, patch, undefined, undefined, undefined, undefined, undefined, options
+    );
+    
+    res.json({ ok: true, message: `Scaled deployment ${name} to 0 replicas.` });
+  } catch (err) {
+    console.error(`Scale to zero failed for ${name}:`, err.message);
+    res.status(500).json({ error: "Failed to scale deployment." });
+  }
+}
+
+export async function rollbackDeploymentTarget(req, res) {
+  const { name } = req.params;
+  if (!isValidK8sName(name)) return res.status(400).json({ error: "Invalid deployment name." });
+
+  try {
+    // Forcefully downgrade the image to simulate an outdated rollback
+    const patch = [{
+      op: "replace",
+      path: "/spec/template/spec/containers/0/image",
+      value: "nginx:1.14.2" 
+    }];
+    const options = { headers: { "Content-type": k8s.PatchUtils.PATCH_FORMAT_JSON_PATCH } };
+    
+    await k8sAppsApi.patchNamespacedDeployment(
+      name, NAMESPACE, patch, undefined, undefined, undefined, undefined, undefined, options
+    );
+    
+    res.json({ ok: true, message: `Simulated rollback on ${name} to older image version.` });
+  } catch (err) {
+    console.error(`Rollback failed for ${name}:`, err.message);
+    res.status(500).json({ error: "Failed to rollback deployment." });
   }
 }
 

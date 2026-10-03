@@ -87,7 +87,7 @@ export default function Nav() {
           </ul>
         </div>
 
-        <div className="nav-section">
+        {/* <div className="nav-section">
           <span className="section-label">SYSTEM</span>
           <ul className="nav-list">
             <li>
@@ -96,7 +96,7 @@ export default function Nav() {
               </NavLink>
             </li>
           </ul>
-        </div>
+        </div> */}
       </div>
 
       {/* Bottom Footer Section */}
