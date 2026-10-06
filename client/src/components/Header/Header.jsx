@@ -10,7 +10,11 @@ export default function Header({ namespace = "devopsplayground", connected = tru
     <header className="header">
       <div className="header-left">
         <div className="header-logo">
-          <span className="header-logo-mark">⌘</span>
+          <img
+            src="/devops-playground-logo.png"
+            alt="DevOps Playground logo"
+            className="header-logo-mark"
+          />
         </div>
         <div className="header-title-block">
           <h1 className="header-title">DevOps Playground</h1>

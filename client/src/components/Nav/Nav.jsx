@@ -42,7 +42,11 @@ export default function Nav() {
       <div className="nav-header">
         <div className="brand">
           <div className="logo-icon">
-            <Hexagon size={20} strokeWidth={1.5} />
+            <img
+              src="/devops-playground-logo.png"
+              alt="DevOps Playground logo"
+              className="logo-icon-image"
+            />
           </div>
           <div className="brand-text">
             <span className="brand-title">DevOps</span>
