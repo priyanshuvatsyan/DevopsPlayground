@@ -38,28 +38,7 @@ export default function Nav() {
 
   return (
     <nav className="sidebar-nav">
-      {/* Top Header Section */}
-      <div className="nav-header">
-        <div className="brand">
-          <div className="logo-icon">
-            <img
-              src="/devops-playground-logo.png"
-              alt="DevOps Playground logo"
-              className="logo-icon-image"
-            />
-          </div>
-          <div className="brand-text">
-            <span className="brand-title">DevOps</span>
-            <span className="brand-subtitle">Playground</span>
-          </div>
-        </div>
-        <div className="cluster-status">
-          <span className="status-dot healthy"></span>
-          <span className="status-text">{clusterData.clusterName}</span>
-        </div>
-      </div>
 
-      {/* Main Navigation Links */}
       <div className="nav-content">
         <div className="nav-section">
           <span className="section-label">WORKLOADS</span>

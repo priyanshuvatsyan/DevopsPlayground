@@ -29,6 +29,8 @@ app.post("/api/chaos/cpu-stress", api.triggerCpuStress);
 app.post("/api/chaos/deployments/:name/scale-zero", api.scaleToZero);
 app.post("/api/chaos/deployments/:name/rollback", api.rollbackDeploymentTarget);
 app.get("/api/cluster/info", api.getClusterInfo);
+app.post("/api/chaos/memory-leak", api.simulateMemoryLeak);
+app.post("/api/chaos/network-partition", api.triggerNetworkPartition);
 
 app.listen(PORT, () => {
   console.log(`DevOps Playground API listening on :${PORT}`);

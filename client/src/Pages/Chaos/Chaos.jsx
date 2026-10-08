@@ -1,4 +1,3 @@
-// client/src/Pages/Chaos/Chaos.jsx
 import React, { useState } from 'react';
 import './Chaos.css';
 
@@ -12,6 +11,8 @@ export default function Chaos() {
   const [isStressing, setIsStressing] = useState(false);
   const [isScaling, setIsScaling] = useState(false);
   const [isRollingBack, setIsRollingBack] = useState(false);
+  const [isLeaking, setIsLeaking] = useState(false);
+  const [isPartitioning, setIsPartitioning] = useState(false);
 
   // Dynamic History State
   const [history, setHistory] = useState([
@@ -29,11 +30,11 @@ export default function Chaos() {
       theme: 'red',
       icon: <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
     },
-    {
+{
       id: 'network-partition',
       title: 'Network Partition',
-      target: 'Isolate worker namespace',
-      desc: 'Introduces network partition via iptables rules.',
+      target: 'Isolate devops-client',
+      desc: isPartitioning ? 'Traffic dropped. Auto-recovering in 30s...' : 'Introduces network partition via NetworkPolicy (Deny All).',
       theme: 'orange',
       icon: <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
     },
@@ -49,7 +50,7 @@ export default function Chaos() {
       id: 'memory-leak',
       title: 'Memory Leak',
       target: 'Simulate OOMKill',
-      desc: 'Allocates memory until OOMKill triggers and pod restarts.',
+      desc: isLeaking ? 'Allocating memory. Awaiting Kubernetes OOMKill termination...' : 'Allocates memory until OOMKill triggers and pod restarts.',
       theme: 'purple',
       icon: <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none"><polygon points="12 2 22 12 12 22 2 12 12 2"></polygon></svg>
     },
@@ -65,12 +66,33 @@ export default function Chaos() {
       id: 'scale-zero',
       title: 'Scale to Zero',
       target: 'devops-client deployment',
-      // Update the description here
       desc: isScaling ? 'Outage in progress. 30s automated recovery scheduled...' : 'Induced outage (replicas: 0). Automated recovery triggers in 30s.',
       theme: 'green',
       icon: <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none"><path d="M12 22l-4-8h8z"></path></svg>
     }
   ];
+
+  // Execute Network Partition
+  const executeNetworkPartition = async () => {
+    if (isPartitioning) return;
+    setIsPartitioning(true);
+    const newExpId = `exp-${Math.floor(100 + Math.random() * 900)}`;
+    
+    try {
+      const res = await fetch('/api/chaos/network-partition', { method: 'POST' });
+      if (res.ok) {
+        setHistory(prev => [{ id: newExpId, name: `Network Partition (devops-client)`, status: 'Pass', time: 'Just now' }, ...prev]);
+      } else {
+        throw new Error("Failed to trigger partition");
+      }
+    } catch (err) {
+      console.error(err);
+      setHistory(prev => [{ id: newExpId, name: `Network Partition failed`, status: 'Fail', time: 'Just now' }, ...prev]);
+    } finally {
+      // Keep UI in loading state for the exact duration of the backend outage
+      setTimeout(() => setIsPartitioning(false), 30000);
+    }
+  };
 
   // Fetch running pods for the Kill Pod modal
   const handleKillPodClick = async () => {
@@ -190,12 +212,35 @@ export default function Chaos() {
     }
   };
 
+  // Execute Memory Leak
+  const executeMemoryLeak = async () => {
+    if (isLeaking) return;
+    setIsLeaking(true);
+    const newExpId = `exp-${Math.floor(100 + Math.random() * 900)}`;
+    
+    try {
+      const res = await fetch('/api/chaos/memory-leak', { method: 'POST' });
+      if (res.ok) {
+        setHistory(prev => [{ id: newExpId, name: `Simulated OOMKill (Memory Leak)`, status: 'Pass', time: 'Just now' }, ...prev]);
+      } else {
+        throw new Error("Failed to trigger memory leak");
+      }
+    } catch (err) {
+      console.error(err);
+      setHistory(prev => [{ id: newExpId, name: `Memory Leak failed`, status: 'Fail', time: 'Just now' }, ...prev]);
+    } finally {
+      setTimeout(() => setIsLeaking(false), 3000);
+    }
+  };
+
   // Route clicks to the right experiment handler
-  const handleCardClick = (expId) => {
+const handleCardClick = (expId) => {
     if (expId === 'kill-pod') handleKillPodClick();
     if (expId === 'cpu-stress') executeCpuStress();
     if (expId === 'scale-zero') executeScaleToZero();
     if (expId === 'rollback') executeRollback();
+    if (expId === 'memory-leak') executeMemoryLeak(); 
+    if (expId === 'network-partition') executeNetworkPartition(); 
   };
 
   return (
@@ -243,23 +288,10 @@ export default function Chaos() {
       {/* HEADER */}
       <div className="chaos-page-header">
         <h1>Chaos Engineering</h1>
-        <div className="header-status">
-          <div className="status-dots">
-             <div className="dot dot-cyan"></div>
-             <div className="dot dot-blue"></div>
-             <div className="dot dot-purple"></div>
-             <div className="dot dot-yellow"></div>
-             <div className="dot dot-green"></div>
-          </div>
-          <span className="time-display">{new Date().toLocaleTimeString()}</span>
-          <span className="health-status">● Healthy</span>
-        </div>
       </div>
 
       {/* MAIN CARDS */}
       <div className="chaos-main-card">
-        
-
         <div className="chaos-grid">
           {chaosExperiments.map((exp) => (
             <div 

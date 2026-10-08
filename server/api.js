@@ -14,6 +14,8 @@ kc.loadFromDefault();
 const k8sApi = kc.makeApiClient(k8s.CoreV1Api);
 const k8sAppsApi = kc.makeApiClient(k8s.AppsV1Api);
 const k8sCustomApi = kc.makeApiClient(k8s.CustomObjectsApi);
+// Add this near the top of api.js with your other k8s client initializations
+const k8sNetworkingV1Api = kc.makeApiClient(k8s.NetworkingV1Api);
 
 const K8S_NAME_RE = /^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$/;
 
@@ -394,26 +396,24 @@ export async function getClusterLogs(req, res) {
   }
 }
 
+// In api.js
 export function triggerCpuStress(req, res) {
-  const DURATION_MS = 45 * 1000; // 45 seconds
+  const DURATION_MS = 90 * 1000; // Increase to 90 seconds
   const end = Date.now() + DURATION_MS;
 
-  // This function continuously chains heavy cryptographic hashing
   const burnCPU = () => {
     if (Date.now() < end) {
-      // pbkdf2 offloads CPU-intensive work to the libuv threadpool
       crypto.pbkdf2("chaos-engineering", "salt", 100000, 64, "sha512", () => {
         burnCPU(); 
       });
     }
   };
 
-  // Node's default threadpool size is 4. Spin up 4 concurrent burners to max out the CPU.
   for (let i = 0; i < 4; i++) {
     burnCPU();
   }
 
-  res.json({ ok: true, message: "CPU stress initiated for 45 seconds." });
+  res.json({ ok: true, message: "CPU stress initiated for 90 seconds." });
 }
 
 export async function scaleToZero(req, res) {
@@ -513,6 +513,67 @@ export async function getClusterInfo(req, res) {
       nodes: { ready: 0, total: 0 },
       namespaces: 0
     });
+  }
+}
+
+export function simulateMemoryLeak(req, res) {
+  // 1. Send the response IMMEDIATELY so the React UI doesn't hang or error out
+  res.json({ ok: true, message: "Memory leak initiated. Pod will be OOMKilled shortly." });
+
+  // 2. Start the leak AFTER the response is sent
+  setTimeout(() => {
+    console.log("[CHAOS ENGINEER] Starting Memory Leak simulation...");
+    const leak = [];
+    // Allocate 50MB of raw OS memory every 100ms
+    const interval = setInterval(() => {
+      try {
+        // Buffer.alloc bypasses the V8 heap and hits system RAM directly
+        leak.push(Buffer.alloc(50 * 1024 * 1024, "x")); 
+        console.log(`[CHAOS ENGINEER] Leaked ${leak.length * 50}MB so far...`);
+      } catch (err) {
+        // We will likely get OOMKilled by Kubernetes before this catch block ever runs
+        clearInterval(interval);
+        console.error("Memory leak failed internally:", err.message);
+      }
+    }, 100);
+  }, 500); // Wait 500ms before starting the leak to ensure the HTTP response completes
+}
+
+// --- NEW NETWORK PARTITION LOGIC ---
+export async function triggerNetworkPartition(req, res) {
+  const CHAOS_DURATION_MS = 30 * 1000; // 30 second outage
+  const targetApp = "devops-client"; 
+  const policyName = `chaos-isolate-${targetApp}`;
+
+  // A NetworkPolicy with empty ingress/egress arrays means "Deny All"
+  const networkPolicy = {
+    apiVersion: "networking.k8s.io/v1",
+    kind: "NetworkPolicy",
+    metadata: { name: policyName },
+    spec: {
+      podSelector: { matchLabels: { app: targetApp } },
+      policyTypes: ["Ingress", "Egress"]
+    }
+  };
+
+  try {
+    console.log(`[CHAOS ENGINEER] Isolating ${targetApp}. Deploying Deny-All NetworkPolicy.`);
+    await k8sNetworkingV1Api.createNamespacedNetworkPolicy(NAMESPACE, networkPolicy);
+
+    // Schedule the Self-Healing
+    setTimeout(async () => {
+      try {
+        console.log(`[CHAOS ENGINEER] Removing NetworkPolicy. Restoring connectivity to ${targetApp}.`);
+        await k8sNetworkingV1Api.deleteNamespacedNetworkPolicy(policyName, NAMESPACE);
+      } catch (recoveryError) {
+        console.error(`[CHAOS ENGINEER] Failed to remove NetworkPolicy!`, recoveryError.message);
+      }
+    }, CHAOS_DURATION_MS);
+
+    res.json({ ok: true, message: `Network partition started for ${targetApp}. Auto-recovering in 30s.` });
+  } catch (err) {
+    console.error("Network partition failed:", err.message);
+    res.status(500).json({ error: "Failed to create NetworkPolicy." });
   }
 }
 

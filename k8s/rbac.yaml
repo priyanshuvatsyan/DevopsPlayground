@@ -1,4 +1,4 @@
-# 1. YOUR UPDATED ROLE (Added statefulsets and daemonsets)
+# 1. YOUR UPDATED ROLE (Added NetworkPolicies for Chaos Engineering)
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -9,12 +9,14 @@ rules:
   resources: ["pods", "services", "pods/log"]
   verbs: ["get", "list", "watch", "delete"]
 - apiGroups: ["apps"]
-  # ---> ADDED: statefulsets and daemonsets
   resources: ["deployments", "statefulsets", "daemonsets"] 
   verbs: ["get", "list", "watch", "patch"]
 - apiGroups: ["metrics.k8s.io"]
   resources: ["pods"]
   verbs: ["get", "list"]
+- apiGroups: ["networking.k8s.io"]
+  resources: ["networkpolicies"]
+  verbs: ["get", "list", "create", "delete", "patch"]
 ---
 # 2. YOUR EXISTING ROLE BINDING (Unchanged)
 apiVersion: rbac.authorization.k8s.io/v1
